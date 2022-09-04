@@ -1,0 +1,7 @@
+executable("akama-sdk-demo") {
+  sources = [ "main.cc" ]
+  
+  deps = [
+    "//base",
+  ]
+}

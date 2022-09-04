@@ -1,4 +1,8 @@
-/.gclient*
-/.cipd
-/src
+.gclient*
+.cipd
+/depot_tools
+/src/*
+!/src/akama-sdk
+/src/akama-sdk/out
+
 
