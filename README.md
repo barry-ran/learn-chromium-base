@@ -1,11 +1,11 @@
-# build-cronet
-build chromium cronet on win&mac&linux and Integrated into cmake
+# learn-chromium-base
+learn chromium base on win&mac
 
-编译chromium cronet并集成到cmake，支持win&mac&linux平台
+编译chromium base并学习用法，支持win&mac平台
 
 # 开发环境
 ## win
-- 安装vs2019/vs2022，选择C++桌面开发组件
+- 安装vs2019/vs2022(安装在默认路径)，选择C++桌面开发组件
 - 安装后给win sdk安装Debugging Tools For Windows(必须的，编译要求，默认没安装)
 
     进入 控制面板\程序\程序和功能，选择Windows Software Development Kit，右键更改，选择Change，勾选Debugging Tools For Windows，点击Change
@@ -14,9 +14,9 @@ build chromium cronet on win&mac&linux and Integrated into cmake
 - xcode
 
 # 编译步骤
-- 编译cronet
+- 编译
 ```
-./build_cronet.sh release
+./build.sh gen build release
 ```
 
 # 参考文档
