@@ -14,7 +14,10 @@ script_path=$(pwd)
 popd
 
 # 启动参数声明
-debug_mode="false"
+debug_mode="true"
+gn_gen="false"
+gn_build="false"
+
 
 # 定义平台变量
 case "$(uname)" in
@@ -22,7 +25,6 @@ case "$(uname)" in
   target_os="linux"
   target_cpu="x64"
   ide=""
-  
   ;;
 
 "Darwin")
@@ -35,7 +37,6 @@ case "$(uname)" in
   target_os="win"
   target_cpu="x64"
   ide="vs"
-
   ;;
 *)
   echo "Unknown OS"
@@ -43,27 +44,19 @@ case "$(uname)" in
   ;;
 esac
 
-if [ $# -ge 2 ] ; then
-    echo
-    echo
-    echo ---------------------------------------------------------------
-    echo check build params[debug/release]
-    echo ---------------------------------------------------------------
-
-    # 编译模式
-    mode=$(echo $1 | tr '[:upper:]' '[:lower:]')
-    if [[ $mode != "release" && $mode != "debug" ]]; then
-        echo "waring: unkonow build mode -- $1, default debug"
-        debug_mode="true"
-    else
-        # 编译模式赋值
-        if [ $1 == "release" ]; then
-            debug_mode="false"
-        else
-            debug_mode="true"
-        fi
+for arg in $*                                          
+do
+    arg_low=$(echo $arg | tr '[:upper:]' '[:lower:]')
+    if [[ $arg_low == "release" ]]; then
+        debug_mode="false"
     fi
-fi
+    if [[ $arg_low == "gen" ]]; then
+        gn_gen="true"
+    fi
+    if [[ $arg_low == "build" ]]; then
+        gn_build="true"
+    fi
+done
 
 # 提示
 if [ $debug_mode == "true" ]; then
@@ -81,7 +74,7 @@ export DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
 # 设置相关路径
 chromium_path=$script_path/src
-dispatch_path=$chromium_path/out
+dispatch_path=$chromium_path/akama-sdk/out
 gen_path_name=cronet-$target_os-$target_cpu
 if [ $debug_mode == "true" ]; then
     gen_path_name=$gen_path_name-debug
@@ -113,7 +106,8 @@ echo ---------------------------------------------------------------
 echo clone chromium
 echo ---------------------------------------------------------------
 
-if [ -d $chromium_path ];then
+# akama-sdk在src目录中，所以这里使用base目录判断是否需要clone chromium
+if [ -d $chromium_path/base ];then
     echo find $chromium_path
 else
     echo not find $chromium_path, download chromium
@@ -128,38 +122,48 @@ else
     echo ---------------------------------------------------------------
     echo gclient sync
     echo ---------------------------------------------------------------
-        
+
     gclient sync --no-history
+
+    # akama-sdk在src目录中，为了使akama-sdk中的代码能被识别
+    # 所以把chromium的.git重命名
+    if [ -d $chromium_path/.git ];then
+        mv $chromium_path/.git $chromium_path/.bak.git
+    fi
 fi
 
 pushd $chromium_path
 
-echo
-echo
-echo ---------------------------------------------------------------
-echo gn gen...
-echo ---------------------------------------------------------------
+if [ $gn_gen == "true" ]; then
+    echo
+    echo
+    echo ---------------------------------------------------------------
+    echo gn gen...
+    echo ---------------------------------------------------------------
 
-# args
-args=is_debug=$debug_mode
-args=$args" target_os=\"$target_os\""
-args=$args" target_cpu=\"$target_cpu\""
+    # args
+    args=is_debug=$debug_mode
+    args=$args" target_os=\"$target_os\""
+    args=$args" target_cpu=\"$target_cpu\""
 
-args=$args" strip_debug_info=true"
+    args=$args" strip_debug_info=true"
 
-args=$args" is_component_build=true"
-args=$args" enable_nacl=false"
+    args=$args" is_component_build=$debug_mode"
+    args=$args" enable_nacl=false"
 
-gn gen $dispatch_path/$gen_path_name --ide=$ide --args="$args"
+    gn gen $dispatch_path/$gen_path_name --ide=$ide --filters=akama-sdk/* --noo-deps --args="$args"
+fi
 
-echo
-echo
-echo ---------------------------------------------------------------
-echo ninja building...
-echo ---------------------------------------------------------------
+if [ $gn_build == "true" ]; then
+    echo
+    echo
+    echo ---------------------------------------------------------------
+    echo ninja building...
+    echo ---------------------------------------------------------------
 
-set NINJA_SUMMARIZE_BUILD=1
-autoninja -C $dispatch_path/$gen_path_name cronet_package
+    set NINJA_SUMMARIZE_BUILD=1
+    autoninja -C $dispatch_path/$gen_path_name akama-sdk
+fi
 
 popd
 
