@@ -111,6 +111,11 @@ if [ -d $chromium_path/base ];then
     echo find $chromium_path
 else
     echo not find $chromium_path, download chromium
+
+    # 同步chromium前先把akama-sdk移出去
+    if [ -d $chromium_path/akama-sdk ];then
+        mv $chromium_path/akama-sdk $chromium_path/../.akama-sdk
+    fi
     
     #release_last_commit=$(git ls-remote https://chromium.googlesource.com/chromium/src.git --heads branch-heads/5060 | head -n 1 | cut -f 1)
     
@@ -129,6 +134,11 @@ else
     # 所以把chromium的.git重命名
     if [ -d $chromium_path/.git ];then
         mv $chromium_path/.git $chromium_path/.bak.git
+    fi
+
+    # 同步完把akama-sdk移回来
+    if [ -d $chromium_path/../.akama-sdk ];then
+        mv $chromium_path/../.akama-sdk $chromium_path/akama-sdk
     fi
 fi
 
