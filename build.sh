@@ -15,6 +15,8 @@ popd
 
 # 启动参数声明
 debug_mode="true"
+gn_clone="false"
+gn_sync="false"
 gn_gen="false"
 gn_build="false"
 
@@ -50,6 +52,12 @@ do
     if [[ $arg_low == "release" ]]; then
         debug_mode="false"
     fi
+    if [[ $arg_low == "clone" ]]; then
+        gn_clone="true"
+    fi
+    if [[ $arg_low == "sync" ]]; then
+        gn_sync="true"
+    fi    
     if [[ $arg_low == "gen" ]]; then
         gn_gen="true"
     fi
@@ -101,18 +109,13 @@ else
     gclient config --unmanaged --name src https://chromium.googlesource.com/chromium/src.git
 fi
 
-echo
-echo ---------------------------------------------------------------
-echo clone chromium
-echo ---------------------------------------------------------------
+if [ $gn_clone == "true" ]; then
+    echo
+    echo ---------------------------------------------------------------
+    echo clone chromium
+    echo ---------------------------------------------------------------
 
-# akama-sdk在src目录中，所以这里使用base目录判断是否需要clone chromium
-if [ -d $chromium_path/base ];then
-    echo find $chromium_path
-else
-    echo not find $chromium_path, download chromium
-
-    # 同步chromium前先把akama-sdk移出去
+    # clone chromium前先把akama-sdk移出去
     if [ -d $chromium_path/akama-sdk ];then
         mv $chromium_path/akama-sdk $chromium_path/../.akama-sdk
     fi
@@ -121,25 +124,30 @@ else
     
     release_tag="103.0.5060.126"
     git -c core.deltaBaseCacheLimit=2g clone -b $release_tag --progress https://chromium.googlesource.com/chromium/src.git --depth=1 src
-    
-    
+
+    pushd $chromium_path
+        git apply --ignore-space-change --ignore-whitespace ../patch/akama-sdk-build.patch
+    popd
+fi
+
+if [ $gn_sync == "true" ]; then
     echo
     echo ---------------------------------------------------------------
     echo gclient sync
     echo ---------------------------------------------------------------
 
-    gclient sync --no-history
+    gclient sync --no-history    
+fi
 
-    # akama-sdk在src目录中，为了使akama-sdk中的代码能被识别
-    # 所以把chromium的.git重命名
-    if [ -d $chromium_path/.git ];then
-        mv $chromium_path/.git $chromium_path/.bak.git
-    fi
+# akama-sdk在src目录中，为了使akama-sdk中的代码改动能被当前仓库识别
+# 所以把chromium的.git重命名
+if [ -d $chromium_path/.git ];then
+    mv $chromium_path/.git $chromium_path/.bak.git
+fi
 
-    # 同步完把akama-sdk移回来
-    if [ -d $chromium_path/../.akama-sdk ];then
-        mv $chromium_path/../.akama-sdk $chromium_path/akama-sdk
-    fi
+# 编译前把akama-sdk移到原来位置
+if [ -d $chromium_path/../.akama-sdk ];then
+    mv $chromium_path/../.akama-sdk $chromium_path/akama-sdk
 fi
 
 pushd $chromium_path
