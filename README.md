@@ -16,7 +16,9 @@ learn chromium base on win&mac
 # 编译步骤
 - 编译
 ```
-./build.sh gen build release
+# 只有第一次需要clone sync
+# 只有增加/删除文件后需要再次gen
+./build.sh clone sync gen build release
 ```
 
 # 参考文档

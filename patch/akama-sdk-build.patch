@@ -1,0 +1,24 @@
+From c876797aea066b0290501fc181679fa266e59c4d Mon Sep 17 00:00:00 2001
+From: rankun <kun.ran@test.com>
+Date: Fri, 9 Sep 2022 11:06:37 +0800
+Subject: [PATCH] feat: akama-sdk build
+
+---
+ BUILD.gn | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 09b4c938cd..e15848b44f 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -1693,3 +1693,7 @@ _lines = [
+ assert(current_toolchain == default_toolchain)
+ 
+ write_file("$root_build_dir/gn_logs.txt", _lines)
++
++group("akama-sdk") {
++  deps = [ "//akama-sdk:akama-sdk" ]
++}
+-- 
+2.21.0.windows.1
+
