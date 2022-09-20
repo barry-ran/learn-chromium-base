@@ -4,6 +4,9 @@
 #include "base/time/time.h"
 
 #include "base/bind.h"
+#include "base/task/task_traits.h"
+#include "base/task/thread_pool.h"
+#include "base/task/thread_pool/thread_pool_instance.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
 
@@ -53,8 +56,60 @@ void TestCallback() {
 // Chromium 消息循环和线程池 (MessageLoop 和 TaskScheduler)
 // https://keyou.github.io/blog/2019/06/11/Chromium-MessageLoop-and-TaskScheduler/
 // https://chromium.googlesource.com/chromium/src/+/refs/tags/103.0.5060.126/docs/threading_and_tasks.md
+// clang-format off
+// chromium线程设计：
+// 1. 一个main thread，不阻塞，处理主要业务逻辑，如果是ui进程则还负责更新ui
+// 2. 一个io thread，负责异步io的处理(ipc，网络，文件)，io数据相关的逻辑处理放在别的线程
+// 3. 少量线程做一些特定的cpu密集任务
+// 4. 一个thread pool做一些通用的cpu密集任务
+// 5. 线程之间通过task沟通
+
+// task运行方式：
+// 1. 并行：在任意线程上并行执行
+// 2. 序列执行：顺序执行，但是可能在任意线程上执行
+// 3. 单线程序列执行：在同一个线程上顺序执行
+// 相比3更推荐2，因为base::SequencedTaskRunner能比您自己管理物理线程更好地实现线程安全
+// clang-format on
 void TestThread() {
   std::cout << "start TestThread:" << base::Time::Now() << std::endl;
+
+  // ThreadPool
+  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("my_thread_pool");
+  DCHECK(base::ThreadPoolInstance::Get());
+
+  // 并行1：ThreadPool::PostTask
+  for (int i = 0; i < 10; ++i) {
+    base::ThreadPool::PostTask(
+        FROM_HERE, base::BindOnce(
+                       [](int i) {
+                         std::cout
+                             << "run ThreadPool task " << i << " on thread id:"
+                             << base::PlatformThread::CurrentId() << std::endl;
+                       },
+                       i));
+  }
+  // 指定任务特点
+  base::ThreadPool::PostTask(
+      FROM_HERE, {base::TaskPriority::BEST_EFFORT, base::MayBlock()},
+      base::BindOnce([]() {
+        std::cout << "run ThreadPool BEST_EFFORT task" << std::endl;
+      }));
+  // 并行2：TaskRunner(除非测试需要精确控制任务的执行方式，否则直接用ThreadPool::PostTask)
+  // CreateTaskRunner创建的是并行的TaskRunner
+  scoped_refptr<base::TaskRunner> task_runner =
+      base::ThreadPool::CreateTaskRunner({base::TaskPriority::USER_VISIBLE});
+  task_runner->PostTask(FROM_HERE, base::BindOnce([]() {
+                          std::cout << "run ThreadPool on TaskRunner"
+                                    << std::endl;
+                        }));
+
+  base::ThreadPoolInstance::Get()->JoinForTesting();
+  base::ThreadPoolInstance::Get()->Shutdown();
+  // Shutdown中故意不释放ThreadPoolInstance而内存泄漏(退出时由系统回收没啥影响)，我们可以通过Set来释放，两者区别是：
+  // 1. 不调用Set，Shutdown后继续ThreadPool::PostTask没啥反应
+  // 2. 调用Set，Shutdown后继续ThreadPool::PostTask会decheck崩溃
+  // base::ThreadPoolInstance::Set(nullptr);
+  // base::ThreadPool::PostTask(FROM_HERE, base::BindOnce([]() {}));
 
   base::Thread work_thread("ThreadName");
   base::Thread::Options options;
