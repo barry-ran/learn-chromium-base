@@ -8,6 +8,7 @@
 #include "base/task/thread_pool.h"
 #include "base/task/thread_pool/thread_pool_instance.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread.h"
 
 // Callback
@@ -63,12 +64,16 @@ void TestCallback() {
 // 3. 少量线程做一些特定的cpu密集任务
 // 4. 一个thread pool做一些通用的cpu密集任务
 // 5. 线程之间通过task沟通
+// 6. 尽量使用Sequences代替锁，通过SEQUENCE_CHECKER限制一个数据结构在一个Sequences运行
 
 // task运行方式：
 // 1. 并行：在任意线程上并行执行
 // 2. 序列执行：顺序执行，但是可能在任意线程上执行
 // 3. 单线程序列执行：在同一个线程上顺序执行
 // 相比3更推荐2，因为base::SequencedTaskRunner能比您自己管理物理线程更好地实现线程安全
+
+// RepeatingTimer 定时器
+//
 // clang-format on
 void TestThread() {
   std::cout << "start TestThread:" << base::Time::Now() << std::endl;
@@ -88,7 +93,7 @@ void TestThread() {
                        },
                        i));
   }
-  // 指定任务特点
+  // 指定任务特点：优先级，是否阻塞，是否允许跳过等
   base::ThreadPool::PostTask(
       FROM_HERE, {base::TaskPriority::BEST_EFFORT, base::MayBlock()},
       base::BindOnce([]() {
@@ -103,6 +108,32 @@ void TestThread() {
                                     << std::endl;
                         }));
 
+  // 序列执行
+  scoped_refptr<base::SequencedTaskRunner> sequenced_task_runner =
+      base::ThreadPool::CreateSequencedTaskRunner(
+          base::TaskPriority::BEST_EFFORT);
+  sequenced_task_runner->PostTask(
+      FROM_HERE, base::BindOnce([]() {
+        std::cout << "run ThreadPool on SequencedTaskRunner 1" << std::endl;
+      }));
+  sequenced_task_runner->PostTask(
+      FROM_HERE, base::BindOnce([]() {
+        std::cout << "run ThreadPool on SequencedTaskRunner 2" << std::endl;
+      }));
+
+  // clang-format off
+  // 单线程序列执行1 base::ThreadPool::CreateSingleThreadTaskRunner
+
+  // base::ThreadPool::PostTaskAndReplyWithResult(from_here,traits,task,reply)
+  // 将task post到线程池运行（需要线程池有SequencedTask），运行完将返回结果传递给reply，并post reply到当前线程环境中执行
+  
+  // 如果当前不在taskrunner线程环境中运行，则触发check
+  // base::SequencedTaskRunnerHandle::Get() 获取默认SequencedTaskRunner，序列执行方式
+  // base::ThreadTaskRunnerHandle::Get() 获取当前线程TaskRunner，单线程序列执行方式  
+
+  // 各种定时器（也需要在taskrunner线程环境中启动）：base::OneShotTimer，base::RepeatingTimer，base::DeadlineTimer
+  // clang-format on  
+
   base::ThreadPoolInstance::Get()->JoinForTesting();
   base::ThreadPoolInstance::Get()->Shutdown();
   // Shutdown中故意不释放ThreadPoolInstance而内存泄漏(退出时由系统回收没啥影响)，我们可以通过Set来释放，两者区别是：
@@ -111,6 +142,7 @@ void TestThread() {
   // base::ThreadPoolInstance::Set(nullptr);
   // base::ThreadPool::PostTask(FROM_HERE, base::BindOnce([]() {}));
 
+  // 单线程序列执行2 base::Thread task_runner()
   base::Thread work_thread("ThreadName");
   base::Thread::Options options;
   options.message_pump_type = base::MessagePumpType::IO;
