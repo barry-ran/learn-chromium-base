@@ -11,6 +11,57 @@
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread.h"
 
+#include "components/cronet/native/include/cronet_c.h"
+#include "cronet/sample_executor.h"
+#include "cronet/sample_url_request_callback.h"
+
+Cronet_EnginePtr CreateCronetEngine() {
+  Cronet_EnginePtr cronet_engine = Cronet_Engine_Create();
+  Cronet_EngineParamsPtr engine_params = Cronet_EngineParams_Create();
+  Cronet_EngineParams_user_agent_set(engine_params, "CronetSample/1");
+  Cronet_EngineParams_enable_quic_set(engine_params, true);
+
+  Cronet_Engine_StartWithParams(cronet_engine, engine_params);
+  Cronet_EngineParams_Destroy(engine_params);
+  return cronet_engine;
+}
+
+void PerformRequest(Cronet_EnginePtr cronet_engine,
+                    const std::string& url,
+                    Cronet_ExecutorPtr executor) {
+  SampleUrlRequestCallback url_request_callback;
+  Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
+  Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
+  Cronet_UrlRequestParams_http_method_set(request_params, "GET");
+
+  Cronet_UrlRequest_InitWithParams(
+      request, cronet_engine, url.c_str(), request_params,
+      url_request_callback.GetUrlRequestCallback(), executor);
+  Cronet_UrlRequestParams_Destroy(request_params);
+
+  Cronet_UrlRequest_Start(request);
+  url_request_callback.WaitForDone();
+  Cronet_UrlRequest_Destroy(request);
+
+  std::cout << "Response Data:" << std::endl
+            << url_request_callback.response_as_string() << std::endl;
+}
+
+void TestCronet() {
+  std::cout << "Hello from Cronet!\n";
+  Cronet_EnginePtr cronet_engine = CreateCronetEngine();
+  std::cout << "Cronet version: "
+            << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
+
+  std::string url("http://www.baidu.com");
+  std::cout << "URL: " << url << std::endl;
+  SampleExecutor executor;
+  PerformRequest(cronet_engine, url, executor.GetExecutor());
+
+  Cronet_Engine_Shutdown(cronet_engine);
+  Cronet_Engine_Destroy(cronet_engine);
+}
+
 // Callback
 // https://chromium.googlesource.com/chromium/src/+/refs/tags/103.0.5060.126/docs/callback.md
 void TestCallback() {
@@ -76,11 +127,7 @@ void TestCallback() {
 //
 // clang-format on
 void TestThread() {
-  std::cout << "start TestThread:" << base::Time::Now() << std::endl;
-
-  // ThreadPool
-  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("my_thread_pool");
-  DCHECK(base::ThreadPoolInstance::Get());
+  std::cout << "start TestThread:" << base::Time::Now() << std::endl;  
 
   // 并行1：ThreadPool::PostTask
   for (int i = 0; i < 10; ++i) {
@@ -134,14 +181,6 @@ void TestThread() {
   // 各种定时器（也需要在taskrunner线程环境中启动）：base::OneShotTimer，base::RepeatingTimer，base::DeadlineTimer
   // clang-format on  
 
-  base::ThreadPoolInstance::Get()->JoinForTesting();
-  base::ThreadPoolInstance::Get()->Shutdown();
-  // Shutdown中故意不释放ThreadPoolInstance而内存泄漏(退出时由系统回收没啥影响)，我们可以通过Set来释放，两者区别是：
-  // 1. 不调用Set，Shutdown后继续ThreadPool::PostTask没啥反应
-  // 2. 调用Set，Shutdown后继续ThreadPool::PostTask会decheck崩溃
-  // base::ThreadPoolInstance::Set(nullptr);
-  // base::ThreadPool::PostTask(FROM_HERE, base::BindOnce([]() {}));
-
   // 单线程序列执行2 base::Thread task_runner()
   base::Thread work_thread("ThreadName");
   base::Thread::Options options;
@@ -188,11 +227,25 @@ void TestThread() {
 int main(int argc, char *argv[]) {
   std::cout << "start demo:" << base::Time::Now() << std::endl;
 
+  // ThreadPool
+  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("my_thread_pool");
+  DCHECK(base::ThreadPoolInstance::Get());
+
+  std::cout << std::endl << "***********************" << std::endl << std::endl;
+  TestCronet();
   std::cout << std::endl << "***********************" << std::endl << std::endl;
   TestCallback();
   std::cout << std::endl << "***********************" << std::endl << std::endl;
   TestThread();
   std::cout << std::endl << "***********************" << std::endl << std::endl;
+
+  base::ThreadPoolInstance::Get()->JoinForTesting();
+  base::ThreadPoolInstance::Get()->Shutdown();
+  // Shutdown中故意不释放ThreadPoolInstance而内存泄漏(退出时由系统回收没啥影响)，我们可以通过Set来释放，两者区别是：
+  // 1. 不调用Set，Shutdown后继续ThreadPool::PostTask没啥反应
+  // 2. 调用Set，Shutdown后继续ThreadPool::PostTask会decheck崩溃
+  // base::ThreadPoolInstance::Set(nullptr);
+  // base::ThreadPool::PostTask(FROM_HERE, base::BindOnce([]() {}));
 
   // getchar();
 
