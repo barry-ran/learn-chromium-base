@@ -1,7 +1,16 @@
 executable("akama-sdk-demo") {
-  sources = [ "main.cc" ]
+  sources = [ 
+    "main.cc",
+    "cronet/sample_executor.cc",
+    "cronet/sample_executor.h",
+    "cronet/sample_url_request_callback.cc",
+    "cronet/sample_url_request_callback.h",
+  ]
   
   deps = [
     "//base",
+    "//components/cronet",
+    # for #include "cronet.idl_c.h"
+    "//components/cronet/native:cronet_native_headers",
   ]
 }
