@@ -15,6 +15,8 @@
 #include "cronet/sample_executor.h"
 #include "cronet/sample_url_request_callback.h"
 
+Cronet_EnginePtr g_cronet_engine = nullptr;
+
 Cronet_EnginePtr CreateCronetEngine() {
   Cronet_EnginePtr cronet_engine = Cronet_Engine_Create();
   Cronet_EngineParamsPtr engine_params = Cronet_EngineParams_Create();
@@ -43,23 +45,18 @@ void PerformRequest(Cronet_EnginePtr cronet_engine,
   url_request_callback.WaitForDone();
   Cronet_UrlRequest_Destroy(request);
 
-  std::cout << "Response Data:" << std::endl
-            << url_request_callback.response_as_string() << std::endl;
+  //std::cout << "Response Data:" << std::endl
+  //          << url_request_callback.response_as_string() << std::endl;
 }
 
 void TestCronet() {
-  std::cout << "Hello from Cronet!\n";
-  Cronet_EnginePtr cronet_engine = CreateCronetEngine();
   std::cout << "Cronet version: "
-            << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
+            << Cronet_Engine_GetVersionString(g_cronet_engine) << std::endl;
 
   std::string url("http://www.baidu.com");
   std::cout << "URL: " << url << std::endl;
   SampleExecutor executor;
-  PerformRequest(cronet_engine, url, executor.GetExecutor());
-
-  Cronet_Engine_Shutdown(cronet_engine);
-  Cronet_Engine_Destroy(cronet_engine);
+  PerformRequest(g_cronet_engine, url, executor.GetExecutor());
 }
 
 // Callback
@@ -227,8 +224,11 @@ void TestThread() {
 int main(int argc, char *argv[]) {
   std::cout << "start demo:" << base::Time::Now() << std::endl;
 
+  g_cronet_engine = CreateCronetEngine();
+
   // ThreadPool
-  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("my_thread_pool");
+  // cronet会初始化线程池，这里不自己做初始化了
+  //base::ThreadPoolInstance::CreateAndStartWithDefaultParams("my_thread_pool");
   DCHECK(base::ThreadPoolInstance::Get());
 
   std::cout << std::endl << "***********************" << std::endl << std::endl;
@@ -239,6 +239,10 @@ int main(int argc, char *argv[]) {
   TestThread();
   std::cout << std::endl << "***********************" << std::endl << std::endl;
 
+  Cronet_Engine_Shutdown(g_cronet_engine);
+  Cronet_Engine_Destroy(g_cronet_engine);
+
+  // cronet不会stop线程池，这里自己stop
   base::ThreadPoolInstance::Get()->JoinForTesting();
   base::ThreadPoolInstance::Get()->Shutdown();
   // Shutdown中故意不释放ThreadPoolInstance而内存泄漏(退出时由系统回收没啥影响)，我们可以通过Set来释放，两者区别是：
