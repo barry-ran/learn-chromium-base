@@ -51,8 +51,8 @@ void SampleUrlRequestCallback::OnReadCompleted(Cronet_UrlRequestPtr request,
                                                Cronet_UrlResponseInfoPtr info,
                                                Cronet_BufferPtr buffer,
                                                uint64_t bytes_read) {
-  std::cout << "OnReadCompleted called: " << bytes_read << " bytes read."
-            << std::endl;
+  // std::cout << "OnReadCompleted called: " << bytes_read << " bytes read."
+  //          << std::endl;
   std::string last_read_data(
       reinterpret_cast<char*>(Cronet_Buffer_GetData(buffer)), bytes_read);
   response_as_string_ += last_read_data;
