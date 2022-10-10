@@ -1,0 +1,10 @@
+executable("akama-sdk-ipc") {
+  sources = [ 
+    "main.cc",    
+  ]
+  
+  deps = [
+    "//base",    
+    "//akama-sdk/sample/ipc/mojom",
+  ]
+}
