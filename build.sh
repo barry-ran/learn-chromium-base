@@ -82,7 +82,8 @@ export DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
 # 设置相关路径
 chromium_path=$script_path/src
-dispatch_path=$chromium_path/akama-sdk/out
+# out必须放在src根目录，否则mojo idl生成cpp类时报路径错误
+dispatch_path=$chromium_path/out
 gen_path_name=cronet-$target_os-$target_cpu
 if [ $debug_mode == "true" ]; then
     gen_path_name=$gen_path_name-debug
