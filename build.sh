@@ -38,7 +38,7 @@ case "$(uname)" in
 "MINGW"*|"MSYS_NT"*)
   target_os="win"
   target_cpu="x64"
-  ide="vs"
+  ide="vs2022"
   ;;
 *)
   echo "Unknown OS"
