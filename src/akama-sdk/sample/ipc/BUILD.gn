@@ -6,5 +6,6 @@ executable("akama-sdk-ipc") {
   deps = [
     "//base",    
     "//akama-sdk/sample/ipc/mojom",
+    "//mojo/core:shared_library",
   ]
 }
