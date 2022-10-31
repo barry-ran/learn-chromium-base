@@ -1,5 +1,8 @@
 module sample.mojom;
 
 interface Logger {
+  // 普通接口
   Log(string message);
+  // 带回调函数的接口
+  GetTail() => (string message);
 };
