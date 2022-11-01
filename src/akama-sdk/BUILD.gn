@@ -2,6 +2,6 @@
 group("akama-sdk") {
   deps = [
     "sample/demo:akama-sdk-demo",
-    "sample/ipc:akama-sdk-ipc",
+    "sample/ipc_mojo_base:ipc_mojo_base",
   ]
 }
