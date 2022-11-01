@@ -9,7 +9,7 @@
 #include "mojo/public/cpp/bindings/remote.h"
 
 // clang-format off
-// Chromium Mojo & IPC：https://keyou.github.io/blog/2020/01/03/Chromium-Mojo&IPC/
+// Chromium Mojo & IPC：https://github.com/keyou/chromium_demo/blob/c/91.0.4472/docs/mojo.md
 // mojo README：https://chromium.googlesource.com/chromium/src/+/refs/tags/103.0.5060.126/mojo/README.md
 // mojo cpp bindings api，使用较多，基于cpp system api实现Mojom IDL和绑定生成器等：https://chromium.googlesource.com/chromium/src/+/refs/tags/103.0.5060.126/mojo/public/cpp/bindings/README.md
 // mojo cpp system api,使用较多：https://chromium.googlesource.com/chromium/src/+/refs/tags/103.0.5060.126/mojo/public/cpp/system/README.md

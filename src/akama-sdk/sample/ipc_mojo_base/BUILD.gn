@@ -1,11 +1,11 @@
-executable("akama-sdk-ipc") {
+executable("ipc_mojo_base") {
   sources = [ 
     "main.cc",    
   ]
   
   deps = [
-    "//base",    
-    "//akama-sdk/sample/ipc/mojom",
+    "//base",
+    "//akama-sdk/sample/ipc_mojo_base/mojom",
     "//mojo/core:shared_library",
   ]
 }
