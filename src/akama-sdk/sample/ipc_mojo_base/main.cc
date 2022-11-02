@@ -83,6 +83,7 @@ int main(int argc, char* argv[]) {
             mojo::PendingReceiver<sample::mojom::Logger> pending_receiver(
                 std::move(pipe.handle1));
 #else
+        // BindNewPipeAndPassReceiver是上面操作的语法糖，只适合单进程中使用mojo的场景
         mojo::Remote<sample::mojom::Logger>* sender =
             new mojo::Remote<sample::mojom::Logger>;
         auto pending_receiver = sender->BindNewPipeAndPassReceiver();

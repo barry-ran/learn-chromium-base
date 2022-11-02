@@ -1,0 +1,5 @@
+module ipc.mojom;
+
+interface KeepAlive {  
+  Heartbeat(int32 process_id);
+};
