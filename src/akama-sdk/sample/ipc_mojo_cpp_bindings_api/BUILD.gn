@@ -1,0 +1,11 @@
+executable("ipc_mojo_cpp_bindings_api") {
+  sources = [ 
+    "main.cc",    
+  ]
+  
+  deps = [
+    "//base",
+    "//akama-sdk/sample/ipc_mojo_cpp_bindings_api/mojom",
+    "//mojo/core:shared_library",
+  ]
+}
