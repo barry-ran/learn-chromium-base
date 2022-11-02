@@ -4,12 +4,15 @@
 #include "base/time/time.h"
 
 #include "base/bind.h"
+#include "base/run_loop.h"
+#include "base/task/single_thread_task_executor.h"
 #include "base/task/task_traits.h"
 #include "base/task/thread_pool.h"
 #include "base/task/thread_pool/thread_pool_instance.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 #include "components/cronet/native/include/cronet_c.h"
 #include "cronet/sample_executor.h"
@@ -238,6 +241,25 @@ int main(int argc, char *argv[]) {
   std::cout << std::endl << "***********************" << std::endl << std::endl;
   TestThread();
   std::cout << std::endl << "***********************" << std::endl << std::endl;
+
+  // base::Thread&base::ThreadPoolInstance都自带消息循环（TaskRunner&RunLoop）
+  // 但是主线程是由系统启动，需要自己创建消息循环：  
+  // base::SingleThreadTaskExecutor为当前线程创建消息循环环境（SequenceManager&TaskRunner）（老版本用的是base::MessageLoop）
+  // base::RunLoop负责运行消息循环处理任务，可以嵌套使用
+  base::SingleThreadTaskExecutor main_task_executer;
+  base::RunLoop run_loop;
+
+  // 初始化一种方式：抛出初始化任务后RunUntilIdle  
+  base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, base::BindOnce([](){
+    std::cout << "run init task on main thread" << std::endl;
+  }));
+  run_loop.RunUntilIdle();
+
+  base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, base::BindOnce([](){
+    std::cout << "run task on main thread" << std::endl;
+  }));
+  
+  run_loop.Run();
 
   Cronet_Engine_Shutdown(g_cronet_engine);
   Cronet_Engine_Destroy(g_cronet_engine);
